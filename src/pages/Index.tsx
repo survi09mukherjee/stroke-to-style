@@ -7,7 +7,14 @@ import { SignalStatus } from "@/components/SignalStatus";
 import { CommunicationPanel } from "@/components/CommunicationPanel";
 import { AutoSignalResponse } from "@/components/AutoSignalResponse";
 import { TrainControls } from "@/components/TrainControls";
+import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { toast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface TrainState {
   id: string;
@@ -23,7 +30,7 @@ interface SignalState {
 }
 
 const Index = () => {
-  const [isEmergencyStopping, setIsEmergencyStopping] = useState(false);
+  const [stoppingTrains, setStoppingTrains] = useState<Set<string>>(new Set());
   const [isAnimating, setIsAnimating] = useState(true);
   
   const [trains, setTrains] = useState<TrainState[]>([
@@ -40,7 +47,7 @@ const Index = () => {
 
   // Animate train movement
   useEffect(() => {
-    if (!isAnimating || isEmergencyStopping) return;
+    if (!isAnimating) return;
     
     const interval = setInterval(() => {
       setTrains(prevTrains => 
@@ -52,7 +59,42 @@ const Index = () => {
     }, 50);
     
     return () => clearInterval(interval);
-  }, [isAnimating, isEmergencyStopping]);
+  }, [isAnimating]);
+
+  // Handle emergency stopping for individual trains
+  useEffect(() => {
+    if (stoppingTrains.size === 0) return;
+
+    const interval = setInterval(() => {
+      setTrains(prevTrains =>
+        prevTrains.map(train => {
+          if (stoppingTrains.has(train.id) && train.speed > 0) {
+            const newSpeed = Math.max(0, train.speed - 5);
+            
+            // Show notification when train fully stops
+            if (newSpeed === 0 && train.speed > 0) {
+              setTimeout(() => {
+                toast({
+                  title: "✓ TRAIN STOPPED",
+                  description: `${train.label} has been brought to a complete stop safely.`,
+                });
+                setStoppingTrains(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(train.id);
+                  return newSet;
+                });
+              }, 100);
+            }
+            
+            return { ...train, speed: newSpeed };
+          }
+          return train;
+        })
+      );
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, [stoppingTrains]);
 
   const handleSpeedChange = (trainId: string, newSpeed: number) => {
     setTrains(prevTrains =>
@@ -84,15 +126,16 @@ const Index = () => {
     });
   };
 
-  const handleEmergencyStop = async () => {
-    if (isEmergencyStopping) return;
-    
-    setIsEmergencyStopping(true);
+  const handleEmergencyStop = (trainId: string) => {
+    const train = trains.find(t => t.id === trainId);
+    if (!train || stoppingTrains.has(trainId)) return;
+
+    setStoppingTrains(prev => new Set(prev).add(trainId));
 
     // First notification: Emergency brake initialization
     toast({
       title: "🚨 EMERGENCY STOP ACTIVATED",
-      description: "Emergency brake initialization...",
+      description: `${train.label}: Emergency brake initialization...`,
       variant: "destructive",
     });
 
@@ -100,19 +143,10 @@ const Index = () => {
     setTimeout(() => {
       toast({
         title: "⚠️ BRAKING IN PROGRESS",
-        description: "Slowing vehicle... Speed reducing rapidly.",
+        description: `${train.label}: Speed reducing rapidly.`,
         variant: "destructive",
       });
     }, 2000);
-
-    // Final notification after 4 seconds: Vehicle stopped
-    setTimeout(() => {
-      toast({
-        title: "✓ VEHICLE STOPPED",
-        description: "All trains have been brought to a complete stop safely.",
-      });
-      setIsEmergencyStopping(false);
-    }, 4000);
   };
 
   return (
@@ -156,11 +190,22 @@ const Index = () => {
 
           {/* Auto Signal Response */}
           <AutoSignalResponse />
+          
+          {/* Analytics Dashboard */}
+          <AnalyticsDashboard />
         </div>
 
         {/* Right Sidebar - Metrics */}
         <div className="space-y-4">
-          <SpeedDisplay speed={Math.round(trains[0].speed)} maxSpeed={120} />
+          <SpeedDisplay 
+            trains={trains.map(t => ({ 
+              id: t.id, 
+              label: t.label, 
+              color: t.color, 
+              speed: t.speed 
+            }))} 
+            maxSpeed={120} 
+          />
           <SignalStatus distance={2} />
           <TrainControls
             trains={trains.map(t => ({ 
@@ -179,13 +224,36 @@ const Index = () => {
               { trainId: 36, distance: "< 3 KM" },
             ]}
           />
-          <Button
-            onClick={handleEmergencyStop}
-            disabled={isEmergencyStopping}
-            className="w-full h-16 text-lg font-bold bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg"
-          >
-            {isEmergencyStopping ? "STOPPING..." : "EMERGENCY STOP"}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                className="w-full h-16 text-lg font-bold bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg"
+              >
+                EMERGENCY STOP
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              {trains.map((train) => (
+                <DropdownMenuItem
+                  key={train.id}
+                  onClick={() => handleEmergencyStop(train.id)}
+                  disabled={stoppingTrains.has(train.id)}
+                  className="cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: train.color }}
+                    />
+                    <span>{train.label}</span>
+                    {stoppingTrains.has(train.id) && (
+                      <span className="ml-auto text-xs text-muted-foreground">Stopping...</span>
+                    )}
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>

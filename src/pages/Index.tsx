@@ -46,6 +46,42 @@ const Index = () => {
     "track-c": { left: "safe", right: "safe" },
   });
 
+  // Calculate collision risk based on train distances
+  const calculateCollisionRisk = () => {
+    let minDistance = Infinity;
+    const zones: Record<number, Array<{ start: number; end: number; severity: "warning" | "danger" }>> = {
+      0: [], 1: [], 2: []
+    };
+
+    for (let i = 0; i < trains.length; i++) {
+      for (let j = i + 1; j < trains.length; j++) {
+        const distance = Math.abs(trains[i].position - trains[j].position);
+        minDistance = Math.min(minDistance, distance);
+
+        // Calculate collision zones on tracks
+        if (distance < 10) { // Within visual range (10% = ~1km visual representation)
+          const severity = distance < 5 ? "danger" : "warning"; // 5% = 500m
+          const start = Math.min(trains[i].position, trains[j].position);
+          const end = Math.max(trains[i].position, trains[j].position);
+          
+          zones[i].push({ start, end, severity });
+          zones[j].push({ start, end, severity });
+        }
+      }
+    }
+
+    // Convert to actual km (assuming 1% = 100m for display)
+    const minDistanceKm = minDistance * 0.1;
+
+    let riskLevel: "safe" | "warning" | "danger" = "safe";
+    if (minDistanceKm < 0.5) riskLevel = "danger";
+    else if (minDistanceKm < 1) riskLevel = "warning";
+
+    return { riskLevel, minDistanceKm, zones };
+  };
+
+  const { riskLevel, minDistanceKm, zones } = calculateCollisionRisk();
+
   // Animate train movement
   useEffect(() => {
     if (!isAnimating) return;
@@ -171,6 +207,7 @@ const Index = () => {
                 signalLeft={signals["track-a"].left}
                 signalRight={signals["track-a"].right}
                 onSignalClick={(side) => handleSignalClick("track-a", side)}
+                collisionZones={zones[0]}
               />
               <RailwayTrack
                 name="TRACK B"
@@ -178,6 +215,7 @@ const Index = () => {
                 signalLeft={signals["track-b"].left}
                 signalRight={signals["track-b"].right}
                 onSignalClick={(side) => handleSignalClick("track-b", side)}
+                collisionZones={zones[1]}
               />
               <RailwayTrack
                 name="TRACK C"
@@ -185,6 +223,7 @@ const Index = () => {
                 signalLeft={signals["track-c"].left}
                 signalRight={signals["track-c"].right}
                 onSignalClick={(side) => handleSignalClick("track-c", side)}
+                collisionZones={zones[2]}
               />
             </div>
           </Card>
@@ -211,7 +250,7 @@ const Index = () => {
             maxSpeed={120} 
           />
           <SignalStatus distance={2} />
-          <CollisionDetection riskLevel="safe" />
+          <CollisionDetection riskLevel={riskLevel} minDistance={minDistanceKm} />
           <CommunicationPanel
             trains={[
               { trainId: 72, distance: "< 3 KM" },

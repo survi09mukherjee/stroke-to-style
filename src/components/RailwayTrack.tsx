@@ -14,9 +14,10 @@ interface TrackProps {
   signalLeft: "safe" | "caution" | "danger";
   signalRight: "safe" | "caution" | "danger";
   onSignalClick?: (side: "left" | "right") => void;
+  collisionZones?: Array<{ start: number; end: number; severity: "warning" | "danger" }>;
 }
 
-export const RailwayTrack = ({ name, train, signalLeft, signalRight, onSignalClick }: TrackProps) => {
+export const RailwayTrack = ({ name, train, signalLeft, signalRight, onSignalClick, collisionZones = [] }: TrackProps) => {
   return (
     <div className="relative py-8">
       {/* Track Label */}
@@ -27,6 +28,22 @@ export const RailwayTrack = ({ name, train, signalLeft, signalRight, onSignalCli
       {/* Track Line */}
       <div className="ml-24 mr-8 relative">
         <div className="h-3 bg-track rounded-full relative">
+          {/* Collision Zones */}
+          {collisionZones.map((zone, idx) => (
+            <div
+              key={idx}
+              className={cn(
+                "absolute h-full rounded-full top-0",
+                zone.severity === "danger" 
+                  ? "bg-signal-stop/30 animate-pulse" 
+                  : "bg-signal-warning/30"
+              )}
+              style={{
+                left: `${zone.start}%`,
+                width: `${zone.end - zone.start}%`,
+              }}
+            />
+          ))}
           {/* Left Traffic Signal */}
           <div 
             className="absolute top-1/2 -translate-y-1/2 left-2 cursor-pointer hover:scale-110 transition-transform"

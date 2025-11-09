@@ -6,8 +6,8 @@ import { SpeedDisplay } from "@/components/SpeedDisplay";
 import { SignalStatus } from "@/components/SignalStatus";
 import { CommunicationPanel } from "@/components/CommunicationPanel";
 import { AutoSignalResponse } from "@/components/AutoSignalResponse";
-import { TrainControls } from "@/components/TrainControls";
 import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
+import { ActivityLog } from "@/components/ActivityLog";
 import { toast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -193,6 +193,9 @@ const Index = () => {
           
           {/* Analytics Dashboard */}
           <AnalyticsDashboard />
+          
+          {/* Activity Log */}
+          <ActivityLog />
         </div>
 
         {/* Right Sidebar - Metrics */}
@@ -207,17 +210,6 @@ const Index = () => {
             maxSpeed={120} 
           />
           <SignalStatus distance={2} />
-          <TrainControls
-            trains={trains.map(t => ({ 
-              id: t.id, 
-              name: t.label, 
-              speed: t.speed, 
-              color: t.color 
-            }))}
-            isAnimating={isAnimating}
-            onSpeedChange={handleSpeedChange}
-            onToggleAnimation={() => setIsAnimating(!isAnimating)}
-          />
           <CommunicationPanel
             trains={[
               { trainId: 72, distance: "< 3 KM" },

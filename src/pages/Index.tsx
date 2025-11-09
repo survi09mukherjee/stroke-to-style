@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { RailwayTrack } from "@/components/RailwayTrack";
 import { SpeedDisplay } from "@/components/SpeedDisplay";
 import { SignalStatus } from "@/components/SignalStatus";
+import { CollisionDetection } from "@/components/CollisionDetection";
 import { CommunicationPanel } from "@/components/CommunicationPanel";
 import { AutoSignalResponse } from "@/components/AutoSignalResponse";
 import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
@@ -210,6 +211,7 @@ const Index = () => {
             maxSpeed={120} 
           />
           <SignalStatus distance={2} />
+          <CollisionDetection riskLevel="safe" />
           <CommunicationPanel
             trains={[
               { trainId: 72, distance: "< 3 KM" },

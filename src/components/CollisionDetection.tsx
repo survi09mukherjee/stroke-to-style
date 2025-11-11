@@ -3,10 +3,9 @@ import { AlertTriangle, Shield } from "lucide-react";
 
 interface CollisionDetectionProps {
   riskLevel: "safe" | "warning" | "danger";
-  minDistance?: number;
 }
 
-export const CollisionDetection = ({ riskLevel, minDistance = 1.8 }: CollisionDetectionProps) => {
+export const CollisionDetection = ({ riskLevel }: CollisionDetectionProps) => {
   const getRiskConfig = () => {
     switch (riskLevel) {
       case "danger":
@@ -61,13 +60,7 @@ export const CollisionDetection = ({ riskLevel, minDistance = 1.8 }: CollisionDe
       <div className="mt-4 space-y-2">
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Minimum Distance</span>
-          <span className={`font-medium ${
-            riskLevel === "danger" ? "text-signal-stop" :
-            riskLevel === "warning" ? "text-signal-warning" :
-            "text-foreground"
-          }`}>
-            {minDistance.toFixed(2)} km
-          </span>
+          <span className="text-foreground font-medium">1.8 km</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Monitoring Status</span>

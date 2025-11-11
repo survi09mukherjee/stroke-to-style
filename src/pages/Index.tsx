@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RailwayTrack } from "@/components/RailwayTrack";
 import { SpeedDisplay } from "@/components/SpeedDisplay";
@@ -7,101 +8,95 @@ import { CollisionDetection } from "@/components/CollisionDetection";
 import { CommunicationPanel } from "@/components/CommunicationPanel";
 import { AutoSignalResponse } from "@/components/AutoSignalResponse";
 import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
+import { ActivityLog } from "@/components/ActivityLog";
 import { toast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface TrainState {
   id: string;
   label: string;
   color: string;
-  fixedPosition: number;
+  position: number;
   speed: number;
-  direction: "up" | "down";
-  distance: number;
+}
+
+interface SignalState {
+  left: "safe" | "caution" | "danger";
+  right: "safe" | "caution" | "danger";
 }
 
 const Index = () => {
   const [stoppingTrains, setStoppingTrains] = useState<Set<string>>(new Set());
-  const [trackOffset, setTrackOffset] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(true);
   
   const [trains, setTrains] = useState<TrainState[]>([
-    { id: "train-a", label: "TRAIN A", color: "#00d4ff", fixedPosition: 50, speed: 72, direction: "up", distance: 3.2 },
-    { id: "train-b", label: "TRAIN B", color: "#ff9500", fixedPosition: 50, speed: 60, direction: "down", distance: 5.1 },
-    { id: "train-c", label: "TRAIN C", color: "#ff3366", fixedPosition: 50, speed: 45, direction: "up", distance: 8.3 },
+    { id: "train-a", label: "TRAIN A", color: "#00d4ff", position: 20, speed: 72 },
+    { id: "train-b", label: "TRAIN B", color: "#ff9500", position: 50, speed: 60 },
+    { id: "train-c", label: "TRAIN C", color: "#ff3366", position: 75, speed: 45 },
   ]);
+  
+  const [signals, setSignals] = useState<Record<string, SignalState>>({
+    "track-a": { left: "safe", right: "safe" },
+    "track-b": { left: "safe", right: "caution" },
+    "track-c": { left: "safe", right: "safe" },
+  });
 
-  const [oncomingTrains, setOncomingTrains] = useState([
-    { id: "oncoming-1", trackIndex: 0, position: 30, color: "#9b59b6" },
-    { id: "oncoming-2", trackIndex: 1, position: 70, color: "#e74c3c" },
-  ]);
-
-  const [stations] = useState([
-    { trackIndex: 0, position: 40, name: "STATION A" },
-    { trackIndex: 1, position: 60, name: "STATION B" },
-    { trackIndex: 2, position: 80, name: "STATION C" },
-  ]);
-
-  // Calculate collision risk based on opposite direction trains
+  // Calculate collision risk based on train distances
   const calculateCollisionRisk = () => {
     let minDistance = Infinity;
-    let hasOppositeCollision = false;
+    const zones: Record<number, Array<{ start: number; end: number; severity: "warning" | "danger" }>> = {
+      0: [], 1: [], 2: []
+    };
 
-    // Check for opposite direction trains on same track
-    const trackGroups: Record<number, TrainState[]> = { 0: [], 1: [], 2: [] };
-    trains.forEach((train, idx) => {
-      trackGroups[idx].push(train);
-    });
-
-    // Check each track for collision with oncoming trains
-    oncomingTrains.forEach(oncoming => {
-      const train = trains[oncoming.trackIndex];
-      if (train && train.direction === "up") {
-        // Simplified distance calculation
-        const distance = Math.abs(50 - oncoming.position) * 0.1; // Convert to km
+    for (let i = 0; i < trains.length; i++) {
+      for (let j = i + 1; j < trains.length; j++) {
+        const distance = Math.abs(trains[i].position - trains[j].position);
         minDistance = Math.min(minDistance, distance);
-        if (distance < 2) {
-          hasOppositeCollision = true;
+
+        // Calculate collision zones on tracks
+        if (distance < 10) { // Within visual range (10% = ~1km visual representation)
+          const severity = distance < 5 ? "danger" : "warning"; // 5% = 500m
+          const start = Math.min(trains[i].position, trains[j].position);
+          const end = Math.max(trains[i].position, trains[j].position);
+          
+          zones[i].push({ start, end, severity });
+          zones[j].push({ start, end, severity });
         }
       }
-    });
+    }
 
-    // Base distance on train separation
-    trains.forEach(train => {
-      minDistance = Math.min(minDistance, train.distance);
-    });
+    // Convert to actual km (assuming 1% = 100m for display)
+    const minDistanceKm = minDistance * 0.1;
 
     let riskLevel: "safe" | "warning" | "danger" = "safe";
-    if (hasOppositeCollision || minDistance < 1) riskLevel = "danger";
-    else if (minDistance < 2) riskLevel = "warning";
+    if (minDistanceKm < 0.5) riskLevel = "danger";
+    else if (minDistanceKm < 1) riskLevel = "warning";
 
-    return { riskLevel, minDistanceKm: minDistance };
+    return { riskLevel, minDistanceKm, zones };
   };
 
-  const { riskLevel, minDistanceKm } = calculateCollisionRisk();
+  const { riskLevel, minDistanceKm, zones } = calculateCollisionRisk();
 
-  // Animate track movement
+  // Animate train movement
   useEffect(() => {
+    if (!isAnimating) return;
+    
     const interval = setInterval(() => {
-      setTrackOffset(prev => (prev + 0.5) % 100);
-      
-      // Update train distances dynamically
       setTrains(prevTrains => 
         prevTrains.map(train => ({
           ...train,
-          distance: train.speed > 0 ? Math.max(0.1, train.distance - 0.01) : train.distance
-        }))
-      );
-
-      // Move oncoming trains
-      setOncomingTrains(prev => 
-        prev.map(train => ({
-          ...train,
-          position: (train.position + 0.3) % 100
+          position: train.position >= 95 ? 5 : train.position + (train.speed / 1000)
         }))
       );
     }, 50);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [isAnimating]);
 
   // Handle emergency stopping for individual trains
   useEffect(() => {
@@ -113,6 +108,7 @@ const Index = () => {
           if (stoppingTrains.has(train.id) && train.speed > 0) {
             const newSpeed = Math.max(0, train.speed - 5);
             
+            // Show notification when train fully stops
             if (newSpeed === 0 && train.speed > 0) {
               setTimeout(() => {
                 toast({
@@ -137,94 +133,160 @@ const Index = () => {
     return () => clearInterval(interval);
   }, [stoppingTrains]);
 
-  const handleEmergencyStop = (trainId: string) => {
-    const train = trains.find(t => t.id === trainId);
-    if (!train || stoppingTrains.has(trainId) || train.speed === 0) return;
+  const handleSpeedChange = (trainId: string, newSpeed: number) => {
+    setTrains(prevTrains =>
+      prevTrains.map(train =>
+        train.id === trainId ? { ...train, speed: newSpeed } : train
+      )
+    );
+  };
 
-    setStoppingTrains(prev => new Set(prev).add(trainId));
-
+  const handleSignalClick = (trackId: string, side: "left" | "right") => {
+    setSignals(prev => {
+      const currentSignal = prev[trackId][side];
+      const nextSignal = 
+        currentSignal === "safe" ? "caution" :
+        currentSignal === "caution" ? "danger" : "safe";
+      
+      return {
+        ...prev,
+        [trackId]: {
+          ...prev[trackId],
+          [side]: nextSignal
+        }
+      };
+    });
+    
     toast({
-      title: "🚨 EMERGENCY STOP ACTIVATED",
-      description: `${train.label}: Emergency brake engaged`,
-      variant: "destructive",
+      title: "Signal Updated",
+      description: `${trackId.toUpperCase()} ${side} signal changed`,
     });
   };
 
-  // Check for collision warnings per train
-  const getTrainCollisionWarning = (trackIndex: number) => {
-    const train = trains[trackIndex];
-    const oncoming = oncomingTrains.find(t => t.trackIndex === trackIndex);
-    
-    if (train && oncoming && train.direction === "up") {
-      const distance = Math.abs(50 - oncoming.position) * 0.1;
-      return distance < 2;
-    }
-    return false;
+  const handleEmergencyStop = (trainId: string) => {
+    const train = trains.find(t => t.id === trainId);
+    if (!train || stoppingTrains.has(trainId)) return;
+
+    setStoppingTrains(prev => new Set(prev).add(trainId));
+
+    // First notification: Emergency brake initialization
+    toast({
+      title: "🚨 EMERGENCY STOP ACTIVATED",
+      description: `${train.label}: Emergency brake initialization...`,
+      variant: "destructive",
+    });
+
+    // Second notification after 2 seconds: Slowing vehicle
+    setTimeout(() => {
+      toast({
+        title: "⚠️ BRAKING IN PROGRESS",
+        description: `${train.label}: Speed reducing rapidly.`,
+        variant: "destructive",
+      });
+    }, 2000);
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-3 overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground p-6">
       {/* Header */}
-      <div className="mb-3">
-        <h1 className="text-xl font-bold text-center tracking-wider">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-center tracking-wider mb-2">
           SMART RAIL-TRACKING AND ANTI-COLLISION SYSTEM
         </h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 max-w-[1800px] mx-auto h-[calc(100vh-100px)]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-[1800px] mx-auto">
         {/* Main Track Visualization */}
-        <div className="lg:col-span-2 space-y-3 overflow-hidden">
+        <div className="lg:col-span-2 space-y-4">
           {/* Railway Tracks */}
-          <Card className="p-4 bg-card border-border">
-            <div className="space-y-2">
+          <Card className="p-8 bg-card border-border">
+            <div className="space-y-6">
               <RailwayTrack
                 name="TRACK A"
                 train={trains[0]}
-                trackOffset={trackOffset}
-                collisionWarning={getTrainCollisionWarning(0)}
-                oncomingTrains={oncomingTrains.filter(t => t.trackIndex === 0)}
-                stations={stations.filter(s => s.trackIndex === 0)}
+                signalLeft={signals["track-a"].left}
+                signalRight={signals["track-a"].right}
+                onSignalClick={(side) => handleSignalClick("track-a", side)}
+                collisionZones={zones[0]}
               />
               <RailwayTrack
                 name="TRACK B"
                 train={trains[1]}
-                trackOffset={trackOffset}
-                collisionWarning={getTrainCollisionWarning(1)}
-                oncomingTrains={oncomingTrains.filter(t => t.trackIndex === 1)}
-                stations={stations.filter(s => s.trackIndex === 1)}
+                signalLeft={signals["track-b"].left}
+                signalRight={signals["track-b"].right}
+                onSignalClick={(side) => handleSignalClick("track-b", side)}
+                collisionZones={zones[1]}
               />
               <RailwayTrack
                 name="TRACK C"
                 train={trains[2]}
-                trackOffset={trackOffset}
-                collisionWarning={getTrainCollisionWarning(2)}
-                oncomingTrains={oncomingTrains.filter(t => t.trackIndex === 2)}
-                stations={stations.filter(s => s.trackIndex === 2)}
+                signalLeft={signals["track-c"].left}
+                signalRight={signals["track-c"].right}
+                onSignalClick={(side) => handleSignalClick("track-c", side)}
+                collisionZones={zones[2]}
               />
             </div>
           </Card>
 
-          <div className="grid grid-cols-2 gap-3">
-            <AutoSignalResponse />
-            <AnalyticsDashboard />
-          </div>
+          {/* Auto Signal Response */}
+          <AutoSignalResponse />
+          
+          {/* Analytics Dashboard */}
+          <AnalyticsDashboard />
+          
+          {/* Activity Log */}
+          <ActivityLog />
         </div>
 
         {/* Right Sidebar - Metrics */}
-        <div className="space-y-3 overflow-hidden">
+        <div className="space-y-4">
           <SpeedDisplay 
-            trains={trains}
-            onStopTrain={handleEmergencyStop}
-            stoppingTrains={stoppingTrains}
+            trains={trains.map(t => ({ 
+              id: t.id, 
+              label: t.label, 
+              color: t.color, 
+              speed: t.speed 
+            }))} 
+            maxSpeed={120} 
           />
-          <SignalStatus distance={minDistanceKm} />
+          <SignalStatus distance={2} />
           <CollisionDetection riskLevel={riskLevel} minDistance={minDistanceKm} />
           <CommunicationPanel
-            trains={trains.map(t => ({ 
-              trainId: parseInt(t.id.split('-')[1] === 'a' ? '72' : t.id.split('-')[1] === 'b' ? '60' : '45'), 
-              distance: `${t.distance.toFixed(1)} KM` 
-            }))}
+            trains={[
+              { trainId: 72, distance: "< 3 KM" },
+              { trainId: 36, distance: "< 3 KM" },
+            ]}
           />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                className="w-full h-16 text-lg font-bold bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg"
+              >
+                EMERGENCY STOP
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              {trains.map((train) => (
+                <DropdownMenuItem
+                  key={train.id}
+                  onClick={() => handleEmergencyStop(train.id)}
+                  disabled={stoppingTrains.has(train.id)}
+                  className="cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: train.color }}
+                    />
+                    <span>{train.label}</span>
+                    {stoppingTrains.has(train.id) && (
+                      <span className="ml-auto text-xs text-muted-foreground">Stopping...</span>
+                    )}
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>

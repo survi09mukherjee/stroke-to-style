@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RailwayTrack } from "@/components/RailwayTrack";
@@ -6,83 +6,10 @@ import { SpeedDisplay } from "@/components/SpeedDisplay";
 import { SignalStatus } from "@/components/SignalStatus";
 import { CommunicationPanel } from "@/components/CommunicationPanel";
 import { AutoSignalResponse } from "@/components/AutoSignalResponse";
-import { TrainControls } from "@/components/TrainControls";
 import { toast } from "@/hooks/use-toast";
-
-interface TrainState {
-  id: string;
-  label: string;
-  color: string;
-  position: number;
-  speed: number;
-}
-
-interface SignalState {
-  left: "safe" | "caution" | "danger";
-  right: "safe" | "caution" | "danger";
-}
 
 const Index = () => {
   const [isEmergencyStopping, setIsEmergencyStopping] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(true);
-  
-  const [trains, setTrains] = useState<TrainState[]>([
-    { id: "train-a", label: "TRAIN A", color: "#00d4ff", position: 20, speed: 72 },
-    { id: "train-b", label: "TRAIN B", color: "#ff9500", position: 50, speed: 60 },
-    { id: "train-c", label: "TRAIN C", color: "#ff3366", position: 75, speed: 45 },
-  ]);
-  
-  const [signals, setSignals] = useState<Record<string, SignalState>>({
-    "track-a": { left: "safe", right: "safe" },
-    "track-b": { left: "safe", right: "caution" },
-    "track-c": { left: "safe", right: "safe" },
-  });
-
-  // Animate train movement
-  useEffect(() => {
-    if (!isAnimating || isEmergencyStopping) return;
-    
-    const interval = setInterval(() => {
-      setTrains(prevTrains => 
-        prevTrains.map(train => ({
-          ...train,
-          position: train.position >= 95 ? 5 : train.position + (train.speed / 1000)
-        }))
-      );
-    }, 50);
-    
-    return () => clearInterval(interval);
-  }, [isAnimating, isEmergencyStopping]);
-
-  const handleSpeedChange = (trainId: string, newSpeed: number) => {
-    setTrains(prevTrains =>
-      prevTrains.map(train =>
-        train.id === trainId ? { ...train, speed: newSpeed } : train
-      )
-    );
-  };
-
-  const handleSignalClick = (trackId: string, side: "left" | "right") => {
-    setSignals(prev => {
-      const currentSignal = prev[trackId][side];
-      const nextSignal = 
-        currentSignal === "safe" ? "caution" :
-        currentSignal === "caution" ? "danger" : "safe";
-      
-      return {
-        ...prev,
-        [trackId]: {
-          ...prev[trackId],
-          [side]: nextSignal
-        }
-      };
-    });
-    
-    toast({
-      title: "Signal Updated",
-      description: `${trackId.toUpperCase()} ${side} signal changed`,
-    });
-  };
 
   const handleEmergencyStop = async () => {
     if (isEmergencyStopping) return;
@@ -132,24 +59,36 @@ const Index = () => {
             <div className="space-y-6">
               <RailwayTrack
                 name="TRACK A"
-                train={trains[0]}
-                signalLeft={signals["track-a"].left}
-                signalRight={signals["track-a"].right}
-                onSignalClick={(side) => handleSignalClick("track-a", side)}
+                train={{
+                  id: "train-a",
+                  label: "TRAIN A",
+                  color: "train-a",
+                  position: 40,
+                }}
+                signalLeft="safe"
+                signalRight="safe"
               />
               <RailwayTrack
                 name="TRACK B"
-                train={trains[1]}
-                signalLeft={signals["track-b"].left}
-                signalRight={signals["track-b"].right}
-                onSignalClick={(side) => handleSignalClick("track-b", side)}
+                train={{
+                  id: "train-b",
+                  label: "TRAIN B",
+                  color: "train-b",
+                  position: 55,
+                }}
+                signalLeft="safe"
+                signalRight="stop"
               />
               <RailwayTrack
                 name="TRACK C"
-                train={trains[2]}
-                signalLeft={signals["track-c"].left}
-                signalRight={signals["track-c"].right}
-                onSignalClick={(side) => handleSignalClick("track-c", side)}
+                train={{
+                  id: "train-c",
+                  label: "TRAIN C",
+                  color: "train-c",
+                  position: 70,
+                }}
+                signalLeft="safe"
+                signalRight="safe"
               />
             </div>
           </Card>
@@ -160,19 +99,8 @@ const Index = () => {
 
         {/* Right Sidebar - Metrics */}
         <div className="space-y-4">
-          <SpeedDisplay speed={Math.round(trains[0].speed)} maxSpeed={120} />
+          <SpeedDisplay speed={72} />
           <SignalStatus distance={2} />
-          <TrainControls
-            trains={trains.map(t => ({ 
-              id: t.id, 
-              name: t.label, 
-              speed: t.speed, 
-              color: t.color 
-            }))}
-            isAnimating={isAnimating}
-            onSpeedChange={handleSpeedChange}
-            onToggleAnimation={() => setIsAnimating(!isAnimating)}
-          />
           <CommunicationPanel
             trains={[
               { trainId: 72, distance: "< 3 KM" },

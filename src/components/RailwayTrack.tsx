@@ -34,16 +34,16 @@ export const RailwayTrack = ({ name, train, trackOffset, collisionWarning = fals
   }, [trackOffset]);
 
   return (
-    <div className="relative py-6">
+    <div className="relative py-4">
       {/* Track Label */}
       <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10">
         <span className="text-xs font-semibold text-foreground bg-background px-2 py-1 rounded">{name}</span>
       </div>
 
       {/* Track Line - moves dynamically */}
-      <div className="ml-24 mr-12 relative overflow-hidden">
+      <div className="ml-20 mr-8 relative overflow-hidden">
         <div className={cn(
-          "h-4 bg-track rounded-full relative",
+          "h-2 bg-track rounded-full relative",
           collisionWarning && "animate-pulse"
         )}>
           {/* Moving track pattern */}
@@ -94,12 +94,12 @@ export const RailwayTrack = ({ name, train, trackOffset, collisionWarning = fals
                 className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
                 style={{ left: `${signal.position}%` }}
               >
-                <div className="flex flex-col gap-1 bg-secondary/80 p-1.5 rounded-lg border border-border">
+                <div className="flex flex-col gap-0.5 bg-secondary/80 p-1 rounded border border-border">
                   <div className={cn(
-                    "w-3 h-3 rounded-full border-2 transition-all",
-                    signal.type === "danger" && "bg-signal-stop border-signal-stop shadow-lg shadow-signal-stop/50",
-                    signal.type === "caution" && "bg-accent border-accent shadow-lg shadow-accent/50 animate-pulse",
-                    signal.type === "safe" && "bg-signal-safe border-signal-safe shadow-lg shadow-signal-safe/50"
+                    "w-2 h-2 rounded-full border transition-all",
+                    signal.type === "danger" && "bg-signal-stop border-signal-stop shadow-sm shadow-signal-stop/50",
+                    signal.type === "caution" && "bg-accent border-accent shadow-sm shadow-accent/50",
+                    signal.type === "safe" && "bg-signal-safe border-signal-safe shadow-sm shadow-signal-safe/50"
                   )} />
                 </div>
               </div>
@@ -135,14 +135,14 @@ export const RailwayTrack = ({ name, train, trackOffset, collisionWarning = fals
               className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center z-20"
               style={{ left: `${train.fixedPosition}%` }}
             >
-              <div className="px-3 py-1 bg-card/90 rounded border border-border mb-2">
-                <span className="font-bold text-foreground text-sm">{train.label}</span>
+              <div className="px-2 py-0.5 bg-card/90 rounded border border-border mb-1">
+                <span className="font-bold text-foreground text-xs">{train.label}</span>
               </div>
               <div 
-                className="w-14 h-12 rounded-lg flex items-center justify-center shadow-xl"
+                className="w-10 h-8 rounded flex items-center justify-center shadow-xl"
                 style={{ backgroundColor: train.color }}
               >
-                <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2c-4 0-8 0.5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v0.5h2l2-2h4l2 2h2v-0.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-4-4-8-4zM7.5 17c-0.83 0-1.5-0.67-1.5-1.5S6.67 14 7.5 14s1.5 0.67 1.5 1.5S8.33 17 7.5 17zm3.5-7H6V6h5v4zm2 0V6h5v4h-5zm3.5 7c-0.83 0-1.5-0.67-1.5-1.5s0.67-1.5 1.5-1.5 1.5 0.67 1.5 1.5-0.67 1.5-1.5 1.5z"/>
                 </svg>
               </div>

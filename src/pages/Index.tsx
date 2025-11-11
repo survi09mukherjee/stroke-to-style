@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RailwayTrack } from "@/components/RailwayTrack";
 import { SpeedDisplay } from "@/components/SpeedDisplay";
@@ -9,12 +8,6 @@ import { CommunicationPanel } from "@/components/CommunicationPanel";
 import { AutoSignalResponse } from "@/components/AutoSignalResponse";
 import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { toast } from "@/hooks/use-toast";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface TrainState {
   id: string;
@@ -85,16 +78,16 @@ const Index = () => {
 
   const { riskLevel, minDistanceKm } = calculateCollisionRisk();
 
-  // Animate track movement (0.75x speed)
+  // Animate track movement
   useEffect(() => {
     const interval = setInterval(() => {
-      setTrackOffset(prev => (prev + 0.375) % 100); // Slowed to 0.75x
+      setTrackOffset(prev => (prev + 0.5) % 100);
       
       // Update train distances dynamically
       setTrains(prevTrains => 
         prevTrains.map(train => ({
           ...train,
-          distance: train.speed > 0 ? Math.max(0.1, train.distance - 0.0075) : train.distance
+          distance: train.speed > 0 ? Math.max(0.1, train.distance - 0.01) : train.distance
         }))
       );
 
@@ -102,7 +95,7 @@ const Index = () => {
       setOncomingTrains(prev => 
         prev.map(train => ({
           ...train,
-          position: (train.position + 0.225) % 100 // Slowed to 0.75x
+          position: (train.position + 0.3) % 100
         }))
       );
     }, 50);
@@ -170,20 +163,20 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-4 overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground p-3 overflow-hidden">
       {/* Header */}
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-center tracking-wider">
+      <div className="mb-3">
+        <h1 className="text-xl font-bold text-center tracking-wider">
           SMART RAIL-TRACKING AND ANTI-COLLISION SYSTEM
         </h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 max-w-[1800px] mx-auto h-[calc(100vh-100px)]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 max-w-[1800px] mx-auto h-[calc(100vh-100px)]">
         {/* Main Track Visualization */}
-        <div className="lg:col-span-2 space-y-4 overflow-hidden flex flex-col">
-          {/* Railway Tracks - Larger */}
-          <Card className="p-8 bg-card border-border flex-1">
-            <div className="space-y-8 h-full flex flex-col justify-center">
+        <div className="lg:col-span-2 space-y-3 overflow-hidden">
+          {/* Railway Tracks */}
+          <Card className="p-4 bg-card border-border">
+            <div className="space-y-2">
               <RailwayTrack
                 name="TRACK A"
                 train={trains[0]}
@@ -211,14 +204,14 @@ const Index = () => {
             </div>
           </Card>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <AutoSignalResponse />
             <AnalyticsDashboard />
           </div>
         </div>
 
         {/* Right Sidebar - Metrics */}
-        <div className="space-y-4 overflow-auto">
+        <div className="space-y-3 overflow-hidden">
           <SpeedDisplay 
             trains={trains}
             onStopTrain={handleEmergencyStop}
@@ -232,39 +225,6 @@ const Index = () => {
               distance: `${t.distance.toFixed(1)} KM` 
             }))}
           />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                className="w-full h-14 text-lg font-bold bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg"
-              >
-                EMERGENCY STOP
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
-              {trains.map((train) => (
-                <DropdownMenuItem
-                  key={train.id}
-                  onClick={() => handleEmergencyStop(train.id)}
-                  disabled={stoppingTrains.has(train.id) || train.speed === 0}
-                  className="cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: train.color }}
-                    />
-                    <span>{train.label}</span>
-                    {stoppingTrains.has(train.id) && (
-                      <span className="ml-auto text-xs text-muted-foreground">Stopping...</span>
-                    )}
-                    {train.speed === 0 && !stoppingTrains.has(train.id) && (
-                      <span className="ml-auto text-xs text-muted-foreground">Stopped</span>
-                    )}
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
     </div>
